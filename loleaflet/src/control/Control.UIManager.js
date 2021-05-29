@@ -463,7 +463,6 @@ L.Control.UIManager = L.Control.extend({
 			return true;
 	},
 
-
 	// Notebookbar helpers
 
 	hasNotebookbarShown: function() {
