@@ -31,6 +31,7 @@
 #include <Poco/MemoryStream.h>
 #include <Poco/Net/HTTPRequest.h>
 #include <Poco/Net/HTTPResponse.h>
+#include <Poco/Net/X509Certificate.h>
 #include <Poco/URI.h>
 
 #include <SigUtil.hpp>
@@ -85,7 +86,8 @@ bool StreamSocket::simulateSocketError(bool read)
     return false;
 }
 
-#if !MOBILEAPP && ENABLE_SSL
+#if ENABLE_SSL
+#if !MOBILEAPP
 bool SslStreamSocket::simulateSocketError(bool read)
 {
     if ((socketErrorCount++ % 7) == 0)
@@ -99,8 +101,20 @@ bool SslStreamSocket::simulateSocketError(bool read)
 
     return false;
 }
-#endif
-#endif
+#endif //!MOBILEAPP
+
+bool SslStreamSocket::verifyCertificate()
+{
+    X509* x509 = SSL_get_peer_certificate(_ssl);
+    if (x509)
+    {
+        Poco::Net::X509Certificate cert(x509);
+        return cert.verify(hostname());
+    }
+
+    return false;
+}
+#endif //ENABLE_SSL
 
 // help with initialization order
 namespace {
@@ -464,7 +478,7 @@ void SocketPoll::insertNewUnixSocket(
     }
 
     std::shared_ptr<StreamSocket> socket
-        = StreamSocket::create<StreamSocket>(fd, true, websocketHandler);
+        = StreamSocket::create<StreamSocket>(std::string(), fd, true, websocketHandler);
     if (!socket)
     {
         LOG_ERR("Failed to create socket unix socket at " << location);
